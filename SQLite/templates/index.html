@@ -98,6 +98,11 @@
 
     <button onclick="checkIngredients()">Check</button>
 
+    <!-- OCR UPLOAD (ADDED) -->
+    <br><br>
+    <input type="file" id="image" accept="image/*">
+    <button onclick="checkOCR()">Scan Image</button>
+
     <div class="result" id="result">
         Result will appear here.
     </div>
@@ -114,60 +119,7 @@ function checkIngredients() {
         body: JSON.stringify({ ingredients: text })
     })
     .then(res => res.json())
-    .then(data => {
-        let output = "";
-
-        /* ===== EXACT HARMFUL MATCH (TOP) ===== */
-        if (data.status === "HIGH RISK" && data.exact_matches.length > 0) {
-            output += `<strong style="color:red;">
-                MATCH FOUND AND IT IS HARMFUL
-            </strong><br><br>`;
-
-            output += `<strong>Harmful Combination:</strong><ul>`;
-
-            data.exact_matches.forEach(rule => {
-                let highlighted = rule;
-                userTokens.forEach(tok => {
-                    highlighted = highlighted.replace(
-                        new RegExp(`\\b(${tok})\\b`, "gi"),
-                        `<span class="highlight">$1</span>`
-                    );
-                });
-                output += `<li>${highlighted}</li>`;
-            });
-
-            output += `</ul><br>`;
-        }
-
-        /* ===== RELATED COMBINATIONS (BELOW) ===== */
-        if (data.related_matches.length > 0) {
-            output += `<strong>Related Combinations:</strong><ul>`;
-
-            data.related_matches.forEach(rule => {
-                let highlighted = rule;
-                userTokens.forEach(tok => {
-                    highlighted = highlighted.replace(
-                        new RegExp(`\\b(${tok})\\b`, "gi"),
-                        `<span class="highlight">$1</span>`
-                    );
-                });
-                output += `<li>${highlighted}</li>`;
-            });
-
-            output += `</ul>`;
-        }
-
-        /* ===== NO MATCH ===== */
-        if (
-            data.exact_matches.length === 0 &&
-            data.related_matches.length === 0
-        ) {
-            output += `<strong>Status:</strong> ${data.status}<br>`;
-            output += `<strong>Message:</strong> ${data.message}`;
-        }
-
-        document.getElementById("result").innerHTML = output;
-    });
+    .then(data => renderResult(data, userTokens));
 }
 
 function checkOCR() {
@@ -186,18 +138,68 @@ function checkOCR() {
     })
     .then(res => res.json())
     .then(data => {
-        let output = `<strong>Status:</strong> ${data.status}<br>`;
-        output += `<strong>Message:</strong> ${data.message}<br>`;
-
-        if (data.extracted_text) {
-            output += `<strong>Extracted Text:</strong><pre>${data.extracted_text}</pre>`;
-        }
-
-        document.getElementById("result").innerHTML = output;
+        const tokens = (data.extracted_text || "")
+            .toLowerCase()
+            .match(/[a-z\-]{3,}/g) || [];
+        renderResult(data, tokens);
     });
 }
-</script>
 
+function renderResult(data, userTokens) {
+    let output = "";
+
+    /* EXACT MATCH */
+    if (data.status === "HIGH RISK" && data.exact_matches.length > 0) {
+        output += `<strong style="color:red;">
+            MATCH FOUND AND IT IS HARMFUL
+        </strong><br><br>`;
+
+        output += `<strong>Harmful Combination:</strong><ul>`;
+        data.exact_matches.forEach(rule => {
+            let highlighted = rule;
+            userTokens.forEach(tok => {
+                highlighted = highlighted.replace(
+                    new RegExp(`\\b(${tok})\\b`, "gi"),
+                    `<span class="highlight">$1</span>`
+                );
+            });
+            output += `<li>${highlighted}</li>`;
+        });
+        output += `</ul><br>`;
+    }
+
+    /* RELATED MATCHES */
+    if (data.related_matches && data.related_matches.length > 0) {
+        output += `<strong>Related Combinations:</strong><ul>`;
+        data.related_matches.forEach(rule => {
+            let highlighted = rule;
+            userTokens.forEach(tok => {
+                highlighted = highlighted.replace(
+                    new RegExp(`\\b(${tok})\\b`, "gi"),
+                    `<span class="highlight">$1</span>`
+                );
+            });
+            output += `<li>${highlighted}</li>`;
+        });
+        output += `</ul>`;
+    }
+
+    /* NO MATCH */
+    if (
+        (!data.exact_matches || data.exact_matches.length === 0) &&
+        (!data.related_matches || data.related_matches.length === 0)
+    ) {
+        output += `<strong>Status:</strong> ${data.status}<br>`;
+        output += `<strong>Message:</strong> ${data.message}`;
+    }
+
+    if (data.extracted_text) {
+        output += `<br><br><strong>Extracted Text:</strong><pre>${data.extracted_text}</pre>`;
+    }
+
+    document.getElementById("result").innerHTML = output;
+}
+</script>
 
 </body>
 </html>

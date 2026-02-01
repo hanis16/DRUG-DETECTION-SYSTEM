@@ -1,21 +1,27 @@
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from PIL import Image
 import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 import sqlite3
 import re
 import os
 
+# -------------------------
+# OCR config (Windows)
+# -------------------------
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 app = Flask(__name__)
 app.secret_key = "admin_secret_key"
 
 # -------------------------
-# Database paths (ABSOLUTE)
+# Database paths (CORRECT)
+# rules.db is OUTSIDE SQLite folder
 # -------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-RULES_DB = os.path.join(BASE_DIR, "rules.db")
-USER_DB = os.path.join(BASE_DIR, "users.db")
+SQLITE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SQLITE_DIR)
+
+RULES_DB = os.path.join(PROJECT_DIR, "rules.db")
+USER_DB = os.path.join(SQLITE_DIR, "users.db")
 
 # -------------------------
 # Helper functions
@@ -25,6 +31,14 @@ def extract_user_ingredients(text):
     text = text.lower()
     tokens = re.findall(r"[a-z\-]{3,}", text)
     return set(tokens)
+
+
+def clean_ocr_text(text):
+    text = text.lower()
+    text = re.sub(r"\d+(mg|ml|mcg)", " ", text)
+    text = re.sub(r"[^a-z\s\-]", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 def check_ingredients(user_tokens):
@@ -47,10 +61,12 @@ def check_ingredients(user_tokens):
 
         rule_tokens = {t.strip() for t in ing_text.split(",")}
 
+        # EXACT match
         if user_tokens == rule_tokens:
             exact_matches.append(name)
             continue
 
+        # PARTIAL match
         if user_tokens & rule_tokens:
             related_matches.append(name)
 
@@ -77,14 +93,6 @@ def check_ingredients(user_tokens):
         "related_matches": []
     }
 
-    def clean_ocr_text(text):
-        text = text.lower()
-        text = re.sub(r"\d+(mg|ml|mcg)", " ", text)
-        text = re.sub(r"[^a-z\s\-]", " ", text)
-        text = re.sub(r"\s+", " ", text)
-        return text.strip()
-
-
 # -------------------------
 # Routes
 # -------------------------
@@ -102,8 +110,26 @@ def check():
     result = check_ingredients(user_tokens)
     return jsonify(result)
 
+
+@app.route("/ocr", methods=["POST"])
+def ocr_image():
+    if "image" not in request.files:
+        return jsonify({"error": "No image uploaded"}), 400
+
+    image_file = request.files["image"]
+    img = Image.open(image_file)
+
+    extracted_text = pytesseract.image_to_string(img)
+    cleaned_text = clean_ocr_text(extracted_text)
+
+    user_tokens = extract_user_ingredients(cleaned_text)
+    result = check_ingredients(user_tokens)
+
+    result["extracted_text"] = extracted_text
+    return jsonify(result)
+
 # -------------------------
-# Admin login (DB-backed)
+# Admin login
 # -------------------------
 
 @app.route("/admin", methods=["GET", "POST"])
@@ -128,16 +154,11 @@ def admin_login():
             session["user_id"] = user[0]
             return redirect(url_for("admin_dashboard"))
 
-        return render_template(
-            "admin_login.html",
-            error="Invalid username or password"
-        )
+        return render_template("admin_login.html",
+                               error="Invalid username or password")
 
     return render_template("admin_login.html")
 
-# -------------------------
-# Admin register (DB write)
-# -------------------------
 
 @app.route("/admin/register", methods=["GET", "POST"])
 def admin_register():
@@ -151,10 +172,8 @@ def admin_register():
         dob = request.form.get("dob")
 
         if password != confirm:
-            return render_template(
-                "admin_register.html",
-                error="Passwords do not match"
-            )
+            return render_template("admin_register.html",
+                                   error="Passwords do not match")
 
         try:
             conn = sqlite3.connect(USER_DB)
@@ -170,18 +189,13 @@ def admin_register():
             conn.close()
 
         except sqlite3.IntegrityError:
-            return render_template(
-                "admin_register.html",
-                error="Username already exists"
-            )
+            return render_template("admin_register.html",
+                                   error="Username already exists")
 
         return redirect(url_for("admin_login"))
 
     return render_template("admin_register.html")
 
-# -------------------------
-# Admin dashboard
-# -------------------------
 
 @app.route("/admin/dashboard")
 def admin_dashboard():
@@ -194,28 +208,10 @@ def admin_dashboard():
     <a href="/admin/logout">Logout</a>
     """
 
-@app.route("/ocr", methods=["POST"])
-def ocr_image():
-    if "image" not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
-
-    image_file = request.files["image"]
-    img = Image.open(image_file)
-
-    extracted_text = pytesseract.image_to_string(img)
-    cleaned_text = clean_ocr_text(extracted_text)
-
-    user_tokens = extract_user_ingredients(cleaned_text)
-    result = check_ingredients(user_tokens)
-
-    result["extracted_text"] = extracted_text
-    return jsonify(result)
-
 
 @app.route("/admin/logout")
 def admin_logout():
-    session.pop("admin_logged_in", None)
-    session.pop("user_id", None)
+    session.clear()
     return redirect(url_for("home"))
 
 # -------------------------
