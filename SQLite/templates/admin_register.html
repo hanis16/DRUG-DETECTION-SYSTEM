@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Registration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        .register-box {
+            width: 360px;
+            margin: 80px auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            border-radius: 4px;
+            border: 1px solid #d1d5db;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="register-box">
+    <h2>Admin Registration</h2>
+
+    <form method="post">
+        <input type="text" name="real_name" placeholder="Full Name" required>
+        <input type="text" name="username" placeholder="Username" required>
+
+        <input type="password" name="password" placeholder="Password" required>
+        <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+
+        <input type="text" name="reg_no" placeholder="Registration Number" required>
+
+        <select name="country" required>
+            <option value="">Select Country</option>
+            <option>India</option>
+            <option>USA</option>
+            <option>UK</option>
+            <option>Other</option>
+        </select>
+
+        <input type="date" name="dob" required>
+
+        <button type="submit">Register</button>
+    </form>
+</div>
+
+</body>
+</html>
