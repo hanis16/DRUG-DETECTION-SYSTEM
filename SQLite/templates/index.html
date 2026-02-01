@@ -169,6 +169,33 @@ function checkIngredients() {
         document.getElementById("result").innerHTML = output;
     });
 }
+
+function checkOCR() {
+    const file = document.getElementById("image").files[0];
+    if (!file) {
+        alert("Please select an image");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    fetch("/ocr", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        let output = `<strong>Status:</strong> ${data.status}<br>`;
+        output += `<strong>Message:</strong> ${data.message}<br>`;
+
+        if (data.extracted_text) {
+            output += `<strong>Extracted Text:</strong><pre>${data.extracted_text}</pre>`;
+        }
+
+        document.getElementById("result").innerHTML = output;
+    });
+}
 </script>
 
 

@@ -1,7 +1,11 @@
+from PIL import Image
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 import sqlite3
 import re
 import os
+
 
 app = Flask(__name__)
 app.secret_key = "admin_secret_key"
@@ -72,6 +76,14 @@ def check_ingredients(user_tokens):
         "exact_matches": [],
         "related_matches": []
     }
+
+    def clean_ocr_text(text):
+        text = text.lower()
+        text = re.sub(r"\d+(mg|ml|mcg)", " ", text)
+        text = re.sub(r"[^a-z\s\-]", " ", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
 
 # -------------------------
 # Routes
@@ -181,6 +193,24 @@ def admin_dashboard():
     <p>Admin access granted.</p>
     <a href="/admin/logout">Logout</a>
     """
+
+@app.route("/ocr", methods=["POST"])
+def ocr_image():
+    if "image" not in request.files:
+        return jsonify({"error": "No image uploaded"}), 400
+
+    image_file = request.files["image"]
+    img = Image.open(image_file)
+
+    extracted_text = pytesseract.image_to_string(img)
+    cleaned_text = clean_ocr_text(extracted_text)
+
+    user_tokens = extract_user_ingredients(cleaned_text)
+    result = check_ingredients(user_tokens)
+
+    result["extracted_text"] = extracted_text
+    return jsonify(result)
+
 
 @app.route("/admin/logout")
 def admin_logout():
