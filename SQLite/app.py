@@ -26,11 +26,24 @@ USER_DB = os.path.join(SQLITE_DIR, "users.db")
 # -------------------------
 # Helper functions
 # -------------------------
+SALT_MAP = {
+    "hydrochloride", "hcl",
+    "sodium", "potassium", "calcium", "magnesium",
+    "phosphate", "sulphate", "sulfate",
+    "nitrate", "acetate"
+}
 
 def extract_user_ingredients(text):
     text = text.lower()
-    tokens = re.findall(r"[a-z\-]{3,}", text)
-    return set(tokens)
+    words = re.findall(r"[a-z\-]{3,}", text)
+
+    cleaned = []
+    for w in words:
+        if w in SALT_MAP:
+            continue
+        cleaned.append(w)
+
+    return set(cleaned)
 
 
 def clean_ocr_text(text):
@@ -59,7 +72,10 @@ def check_ingredients(user_tokens):
         if ing_text == "category_only":
             continue
 
-        rule_tokens = {t.strip() for t in ing_text.split(",")}
+        rule_tokens = {
+    t.strip() for t in ing_text.split(",")
+    if t.strip() not in SALT_MAP
+                }
 
         # EXACT match
         if user_tokens == rule_tokens:
