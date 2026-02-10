@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Rule</title>
+</head>
+<body>
+    <h2>Edit Rule</h2>
+
+    <form method="post">
+        <label>Name:</label><br>
+        <input type="text" name="name" value="{{ rule[1] }}"><br><br>
+
+        <label>Ingredients:</label><br>
+        <input type="text" name="ingredients" value="{{ rule[2] }}"><br><br>
+
+        <label>Risk Level:</label><br>
+        <input type="text" name="risk_level" value="{{ rule[3] }}"><br><br>
+
+        <button type="submit">Save</button>
+    </form>
+
+    <br>
+    <a href="/admin/dashboard">Back</a>
+</body>
+</html>

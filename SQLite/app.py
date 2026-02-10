@@ -14,8 +14,7 @@ app = Flask(__name__)
 app.secret_key = "admin_secret_key"
 
 # -------------------------
-# Database paths (CORRECT)
-# rules.db is OUTSIDE SQLite folder
+# Database paths
 # -------------------------
 SQLITE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SQLITE_DIR)
@@ -24,9 +23,8 @@ RULES_DB = os.path.join(PROJECT_DIR, "rules.db")
 USER_DB = os.path.join(SQLITE_DIR, "users.db")
 
 # -------------------------
-# Helper functions
+# Helper data
 # -------------------------
-
 SALT_MAP = {
     "hydrochloride", "hcl",
     "sodium", "potassium", "calcium", "magnesium",
@@ -34,18 +32,14 @@ SALT_MAP = {
     "nitrate", "acetate"
 }
 
+# -------------------------
+# Helper functions
+# -------------------------
 def extract_user_ingredients(text):
     text = text.lower()
     words = re.findall(r"[a-z\-]{3,}", text)
-
-    cleaned = []
-    for w in words:
-        if w in SALT_MAP:
-            continue
-        cleaned.append(w)
-
+    cleaned = [w for w in words if w not in SALT_MAP]
     return set(cleaned)
-
 
 def clean_ocr_text(text):
     text = text.lower()
@@ -54,15 +48,11 @@ def clean_ocr_text(text):
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
-
 def check_ingredients(user_tokens):
     conn = sqlite3.connect(RULES_DB)
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT name, ingredients, risk_level
-        FROM regulatory_rules
-    """)
+    cur.execute("SELECT name, ingredients, risk_level FROM regulatory_rules")
     rules = cur.fetchall()
     conn.close()
 
@@ -84,7 +74,7 @@ def check_ingredients(user_tokens):
             exact_matches.append(name)
             continue
 
-        # PARTIAL / RELATED match
+        # PARTIAL match
         if user_tokens & rule_tokens:
             related_matches.append(name)
 
@@ -93,9 +83,7 @@ def check_ingredients(user_tokens):
             "status": "HIGH RISK",
             "message": "Exact harmful combination detected.",
             "exact_matches": exact_matches,
-            "related_matches": [
-                r for r in related_matches if r not in exact_matches
-            ]
+            "related_matches": [r for r in related_matches if r not in exact_matches]
         }
 
     if related_matches:
@@ -113,16 +101,12 @@ def check_ingredients(user_tokens):
         "related_matches": []
     }
 
-
-
 # -------------------------
 # Routes
 # -------------------------
-
 @app.route("/")
 def home():
     return render_template("index.html")
-
 
 @app.route("/check", methods=["POST"])
 def check():
@@ -131,7 +115,6 @@ def check():
     user_tokens = extract_user_ingredients(ingredients_text)
     result = check_ingredients(user_tokens)
     return jsonify(result)
-
 
 @app.route("/ocr", methods=["POST"])
 def ocr_image():
@@ -146,14 +129,13 @@ def ocr_image():
 
     user_tokens = extract_user_ingredients(cleaned_text)
     result = check_ingredients(user_tokens)
-
     result["extracted_text"] = extracted_text
+
     return jsonify(result)
 
 # -------------------------
 # Admin login
 # -------------------------
-
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -162,28 +144,23 @@ def admin_login():
 
         conn = sqlite3.connect(USER_DB)
         cur = conn.cursor()
-
-        cur.execute("""
-            SELECT user_id FROM users
-            WHERE username = ? AND password = ?
-        """, (username, password))
-
+        cur.execute("SELECT user_id, role FROM users WHERE username=? AND password=?", (username, password))
         user = cur.fetchone()
         conn.close()
 
         if user:
             session["admin_logged_in"] = True
             session["user_id"] = user[0]
+            session["role"] = user[1]
             return redirect(url_for("admin_dashboard"))
 
-        return render_template(
-            "admin_login.html",
-            error="Invalid username or password"
-        )
+        return render_template("admin_login.html", error="Invalid username or password")
 
     return render_template("admin_login.html")
 
-
+# -------------------------
+# Admin register
+# -------------------------
 @app.route("/admin/register", methods=["GET", "POST"])
 def admin_register():
     if request.method == "POST":
@@ -196,47 +173,76 @@ def admin_register():
         dob = request.form.get("dob")
 
         if password != confirm:
-            return render_template(
-                "admin_register.html",
-                error="Passwords do not match"
-            )
+            return render_template("admin_register.html", error="Passwords do not match")
 
         try:
             conn = sqlite3.connect(USER_DB)
             cur = conn.cursor()
-
             cur.execute("""
-                INSERT INTO users
-                (full_name, username, password, registration_number, country, date_of_birth)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO users (full_name, username, password, registration_number, country, date_of_birth, role)
+                VALUES (?, ?, ?, ?, ?, ?, 'admin')
             """, (full_name, username, password, reg_no, country, dob))
-
             conn.commit()
             conn.close()
-
         except sqlite3.IntegrityError:
-            return render_template(
-                "admin_register.html",
-                error="Username already exists"
-            )
+            return render_template("admin_register.html", error="Username already exists")
 
         return redirect(url_for("admin_login"))
 
     return render_template("admin_register.html")
 
-
+# -------------------------
+# Admin dashboard
+# -------------------------
 @app.route("/admin/dashboard")
 def admin_dashboard():
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
-    return """
-    <h2>Admin Dashboard</h2>
-    <p>Admin access granted.</p>
-    <a href="/admin/logout">Logout</a>
-    """
+    role = session.get("role")
 
+    conn = sqlite3.connect(RULES_DB)
+    cur = conn.cursor()
+    cur.execute("SELECT id, rule_id, proposed_name, status FROM pending_changes")
+    pending = cur.fetchall()
+    conn.close()
 
+    return render_template("admin_dashboard.html", role=role, pending=pending)
+
+# -------------------------
+# Approve change (SUPERADMIN ONLY)
+# -------------------------
+@app.route("/admin/approve/<int:change_id>")
+def approve_change(change_id):
+    if session.get("role") != "superadmin":
+        return "Forbidden", 403
+
+    conn = sqlite3.connect(RULES_DB)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT rule_id, proposed_name, proposed_ingredients, proposed_risk_level
+        FROM pending_changes WHERE id=?
+    """, (change_id,))
+    row = cur.fetchone()
+
+    if row:
+        rule_id, name, ingredients, risk = row
+        cur.execute("""
+            UPDATE regulatory_rules
+            SET name=?, ingredients=?, risk_level=?
+            WHERE rule_id=?
+        """, (name, ingredients, risk, rule_id))
+
+        cur.execute("UPDATE pending_changes SET status='APPROVED' WHERE id=?", (change_id,))
+        conn.commit()
+
+    conn.close()
+    return redirect(url_for("admin_dashboard"))
+
+# -------------------------
+# Logout
+# -------------------------
 @app.route("/admin/logout")
 def admin_logout():
     session.clear()
@@ -245,7 +251,5 @@ def admin_logout():
 # -------------------------
 # Start server
 # -------------------------
-
 if __name__ == "__main__":
     app.run(debug=True)
-

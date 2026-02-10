@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <style>
+        body { font-family: Arial; background:#f4f6f8; padding:20px; }
+        table { border-collapse: collapse; width:100%; background:white; }
+        th, td { padding:10px; border:1px solid #ddd; text-align:left; }
+        th { background:#1f2937; color:white; }
+        a.btn { padding:6px 10px; background:#2563eb; color:white; text-decoration:none; border-radius:4px; }
+        a.btn-danger { background:#dc2626; }
+    </style>
+</head>
+<body>
+
+<h2>Admin Dashboard</h2>
+<p>Role: <strong>{{ role }}</strong></p>
+
+<h3>Pending Changes (Need Superadmin Approval)</h3>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Rule ID</th>
+        <th>Proposed Name</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    {% for p in pending %}
+    <tr>
+        <td>{{ p[0] }}</td>
+        <td>{{ p[1] }}</td>
+        <td>{{ p[2] }}</td>
+        <td>{{ p[3] }}</td>
+        <td>
+            {% if role == "superadmin" %}
+                <a class="btn" href="/admin/approve/{{ p[0] }}">Approve</a>
+            {% else %}
+                Waiting
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<a href="/admin/logout">Logout</a>
+
+</body>
+</html>
