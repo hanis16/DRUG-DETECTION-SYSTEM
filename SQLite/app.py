@@ -26,6 +26,7 @@ USER_DB = os.path.join(SQLITE_DIR, "users.db")
 # -------------------------
 # Helper functions
 # -------------------------
+
 SALT_MAP = {
     "hydrochloride", "hcl",
     "sodium", "potassium", "calcium", "magnesium",
@@ -73,16 +74,17 @@ def check_ingredients(user_tokens):
             continue
 
         rule_tokens = {
-    t.strip() for t in ing_text.split(",")
-    if t.strip() not in SALT_MAP
-                }
+            t.strip()
+            for t in ing_text.split(",")
+            if t.strip() and t.strip() not in SALT_MAP
+        }
 
-        # EXACT match
-        if user_tokens == rule_tokens:
+        # EXACT harmful match: rule ⊆ input
+        if rule_tokens.issubset(user_tokens):
             exact_matches.append(name)
             continue
 
-        # PARTIAL match
+        # PARTIAL / RELATED match
         if user_tokens & rule_tokens:
             related_matches.append(name)
 
@@ -91,7 +93,9 @@ def check_ingredients(user_tokens):
             "status": "HIGH RISK",
             "message": "Exact harmful combination detected.",
             "exact_matches": exact_matches,
-            "related_matches": related_matches
+            "related_matches": [
+                r for r in related_matches if r not in exact_matches
+            ]
         }
 
     if related_matches:
@@ -108,6 +112,8 @@ def check_ingredients(user_tokens):
         "exact_matches": [],
         "related_matches": []
     }
+
+
 
 # -------------------------
 # Routes
@@ -170,8 +176,10 @@ def admin_login():
             session["user_id"] = user[0]
             return redirect(url_for("admin_dashboard"))
 
-        return render_template("admin_login.html",
-                               error="Invalid username or password")
+        return render_template(
+            "admin_login.html",
+            error="Invalid username or password"
+        )
 
     return render_template("admin_login.html")
 
@@ -188,8 +196,10 @@ def admin_register():
         dob = request.form.get("dob")
 
         if password != confirm:
-            return render_template("admin_register.html",
-                                   error="Passwords do not match")
+            return render_template(
+                "admin_register.html",
+                error="Passwords do not match"
+            )
 
         try:
             conn = sqlite3.connect(USER_DB)
@@ -205,8 +215,10 @@ def admin_register():
             conn.close()
 
         except sqlite3.IntegrityError:
-            return render_template("admin_register.html",
-                                   error="Username already exists")
+            return render_template(
+                "admin_register.html",
+                error="Username already exists"
+            )
 
         return redirect(url_for("admin_login"))
 
@@ -236,3 +248,4 @@ def admin_logout():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
