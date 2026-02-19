@@ -12,24 +12,24 @@
         }
 
         .login-box {
-            width: 320px;
+            width: 340px;
             margin: 120px auto;
             background-color: white;
-            padding: 20px;
+            padding: 24px;
             border-radius: 6px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         h2 {
             margin-top: 0;
-            margin-bottom: 16px;
+            margin-bottom: 18px;
             text-align: center;
-            font-size: 18px;
+            font-size: 20px;
         }
 
         input {
             width: 100%;
-            padding: 8px;
+            padding: 9px;
             margin-bottom: 12px;
             font-size: 14px;
             border-radius: 4px;
@@ -40,6 +40,7 @@
             font-size: 13px;
             margin-bottom: 10px;
             display: block;
+            text-align: left;
         }
 
         .register-link a {
@@ -53,7 +54,7 @@
 
         button {
             width: 100%;
-            padding: 8px;
+            padding: 9px;
             background-color: #2563eb;
             color: white;
             border: none;
@@ -62,11 +63,22 @@
             cursor: pointer;
         }
 
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
         .error {
-            color: red;
+            color: #dc2626;
             font-size: 13px;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -83,13 +95,17 @@
         <input type="text" name="username" placeholder="Username" required>
         <input type="password" name="password" placeholder="Password" required>
 
-        <!-- Register link placed exactly here -->
+        <!-- Register link stays here, just like you wanted -->
         <span class="register-link">
             <a href="/admin/register">Register</a>
         </span>
 
         <button type="submit">Login</button>
     </form>
+
+    <div class="hint">
+        Authorized users only
+    </div>
 </div>
 
 </body>

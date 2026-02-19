@@ -2,24 +2,88 @@
 <html>
 <head>
     <title>Edit Rule</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 30px;
+        }
+
+        .box {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 6px;
+            margin-bottom: 14px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .note {
+            background: #fef3c7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        a {
+            text-decoration: none;
+            color: #2563eb;
+        }
+    </style>
 </head>
 <body>
+
+<div class="box">
     <h2>Edit Rule</h2>
 
+    <div class="note">
+        If this rule is <strong>category_only</strong>, changes will be applied immediately.<br>
+        Otherwise, your changes will be sent for <strong>superadmin approval</strong>.
+    </div>
+
     <form method="post">
-        <label>Name:</label><br>
-        <input type="text" name="name" value="{{ rule[1] }}"><br><br>
+        <label>Name:</label>
+        <input type="text" name="name" value="{{ rule[1] }}" required>
 
-        <label>Ingredients:</label><br>
-        <input type="text" name="ingredients" value="{{ rule[2] }}"><br><br>
+        <label>Ingredients (comma separated or category_only):</label>
+        <input type="text" name="ingredients" value="{{ rule[2] }}" required>
 
-        <label>Risk Level:</label><br>
-        <input type="text" name="risk_level" value="{{ rule[3] }}"><br><br>
+        <label>Risk Level:</label>
+        <input type="text" name="risk_level" value="{{ rule[3] }}" required>
 
-        <button type="submit">Save</button>
+        <button type="submit">Save Changes</button>
     </form>
 
     <br>
-    <a href="/admin/dashboard">Back</a>
+    <a href="/admin/dashboard">← Back to Dashboard</a>
+</div>
+
 </body>
 </html>

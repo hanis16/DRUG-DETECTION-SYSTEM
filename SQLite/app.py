@@ -70,7 +70,7 @@ def check_ingredients(user_tokens):
         }
 
         # EXACT harmful match: rule ⊆ input
-        if rule_tokens.issubset(user_tokens):
+        if rule_tokens and rule_tokens.issubset(user_tokens):
             exact_matches.append(name)
             continue
 
@@ -144,7 +144,10 @@ def admin_login():
 
         conn = sqlite3.connect(USER_DB)
         cur = conn.cursor()
-        cur.execute("SELECT user_id, role FROM users WHERE username=? AND password=?", (username, password))
+        cur.execute(
+            "SELECT user_id, role FROM users WHERE username=? AND password=?",
+            (username, password)
+        )
         user = cur.fetchone()
         conn.close()
 
@@ -203,14 +206,88 @@ def admin_dashboard():
 
     conn = sqlite3.connect(RULES_DB)
     cur = conn.cursor()
-    cur.execute("SELECT id, rule_id, proposed_name, status FROM pending_changes")
+
+    cur.execute("SELECT rule_id, name, ingredients, risk_level FROM regulatory_rules")
+    rules = cur.fetchall()
+
+    cur.execute("SELECT id, rule_id, proposed_name, status FROM pending_changes WHERE status='PENDING'")
     pending = cur.fetchall()
+
     conn.close()
 
-    return render_template("admin_dashboard.html", role=role, pending=pending)
+    return render_template("admin_dashboard.html", role=role, rules=rules, pending=pending)
 
 # -------------------------
-# Approve change (SUPERADMIN ONLY)
+# Edit rule
+# -------------------------
+@app.route("/admin/edit/<int:rule_id>", methods=["GET", "POST"])
+def edit_rule(rule_id):
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("admin_login"))
+
+    role = session.get("role")
+
+    conn = sqlite3.connect(RULES_DB)
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        name = request.form.get("name")
+        ingredients = request.form.get("ingredients")
+        risk = request.form.get("risk_level")
+
+        cur.execute("SELECT ingredients FROM regulatory_rules WHERE rule_id=?", (rule_id,))
+        old = cur.fetchone()
+
+        if not old:
+            conn.close()
+            return "Rule not found", 404
+
+        old_ing = old[0]
+
+        # category_only -> anyone can update directly
+        if old_ing == "category_only":
+            cur.execute("""
+                UPDATE regulatory_rules
+                SET name=?, ingredients=?, risk_level=?
+                WHERE rule_id=?
+            """, (name, ingredients, risk, rule_id))
+            conn.commit()
+            conn.close()
+            return redirect(url_for("admin_dashboard"))
+
+        # real combinations
+        if role == "superadmin":
+            # superadmin updates directly
+            cur.execute("""
+                UPDATE regulatory_rules
+                SET name=?, ingredients=?, risk_level=?
+                WHERE rule_id=?
+            """, (name, ingredients, risk, rule_id))
+            conn.commit()
+            conn.close()
+            return redirect(url_for("admin_dashboard"))
+        else:
+            # normal admin -> pending
+            cur.execute("""
+                INSERT INTO pending_changes (rule_id, proposed_name, proposed_ingredients, proposed_risk_level, status)
+                VALUES (?, ?, ?, ?, 'PENDING')
+            """, (rule_id, name, ingredients, risk))
+            conn.commit()
+            conn.close()
+            return redirect(url_for("admin_dashboard"))
+
+    # GET
+    cur.execute("SELECT rule_id, name, ingredients, risk_level FROM regulatory_rules WHERE rule_id=?", (rule_id,))
+    rule = cur.fetchone()
+    conn.close()
+
+    if not rule:
+        return "Rule not found", 404
+
+    return render_template("edit_rule.html", rule=rule)
+
+# -------------------------
+# Approve change (SUPERADMIN)
 # -------------------------
 @app.route("/admin/approve/<int:change_id>")
 def approve_change(change_id):
@@ -228,6 +305,7 @@ def approve_change(change_id):
 
     if row:
         rule_id, name, ingredients, risk = row
+
         cur.execute("""
             UPDATE regulatory_rules
             SET name=?, ingredients=?, risk_level=?

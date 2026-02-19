@@ -4,11 +4,12 @@
     <title>Admin Dashboard</title>
     <style>
         body { font-family: Arial; background:#f4f6f8; padding:20px; }
-        table { border-collapse: collapse; width:100%; background:white; }
+        table { border-collapse: collapse; width:100%; background:white; margin-bottom:30px; }
         th, td { padding:10px; border:1px solid #ddd; text-align:left; }
         th { background:#1f2937; color:white; }
         a.btn { padding:6px 10px; background:#2563eb; color:white; text-decoration:none; border-radius:4px; }
         a.btn-danger { background:#dc2626; }
+        a.btn-secondary { background:#6b7280; }
     </style>
 </head>
 <body>
@@ -16,6 +17,36 @@
 <h2>Admin Dashboard</h2>
 <p>Role: <strong>{{ role }}</strong></p>
 
+<!-- ========================= -->
+<!-- ALL RULES -->
+<!-- ========================= -->
+<h3>All Regulatory Rules</h3>
+
+<table>
+    <tr>
+        <th>Rule ID</th>
+        <th>Name</th>
+        <th>Ingredients</th>
+        <th>Risk Level</th>
+        <th>Action</th>
+    </tr>
+
+    {% for r in rules %}
+    <tr>
+        <td>{{ r[0] }}</td>
+        <td>{{ r[1] }}</td>
+        <td>{{ r[2] }}</td>
+        <td>{{ r[3] }}</td>
+        <td>
+            <a class="btn" href="/admin/edit/{{ r[0] }}">Edit</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- ========================= -->
+<!-- PENDING CHANGES -->
+<!-- ========================= -->
 <h3>Pending Changes (Need Superadmin Approval)</h3>
 
 <table>
