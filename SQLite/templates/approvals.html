@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Approvals</title>
+    <style>
+        body { font-family: Arial; background:#f4f6f8; padding:20px; }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-logout {
+            padding: 8px 14px;
+            background: #dc2626;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .btn-logout:hover {
+            background: #b91c1c;
+        }
+
+        /* Navigation */
+        .nav {
+            margin-bottom:20px;
+        }
+
+        .nav a {
+            margin-right:15px;
+            text-decoration:none;
+            font-weight:bold;
+            color:#2563eb;
+        }
+
+        /* Table */
+        table { border-collapse: collapse; width:100%; background:white; margin-bottom:30px; }
+        th, td { padding:10px; border:1px solid #ddd; text-align:left; }
+        th { background:#1f2937; color:white; }
+
+        /* Buttons */
+        a.btn {
+            padding:6px 10px;
+            background:#2563eb;
+            color:white;
+            text-decoration:none;
+            border-radius:4px;
+        }
+
+        a.btn-danger {
+            background:#dc2626;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div>
+        <h2 style="margin:0;">Approval Requests</h2>
+        <p style="margin:5px 0;">Role: <strong>{{ role }}</strong></p>
+    </div>
+
+    <a href="{{ url_for('admin_logout') }}" class="btn-logout">Logout</a>
+</div>
+
+<div class="nav">
+    <a href="/admin/database">Database</a>
+    {% if role|lower == "superadmin" %}
+        <a href="/admin/approvals">Approvals</a>
+    {% endif %}
+</div>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Rule ID</th>
+        <th>Proposed Name</th>
+        <th>Proposed Ingredients</th>
+        <th>Proposed Risk</th>
+        <th>Action</th>
+    </tr>
+
+    {% for a in approvals %}
+    <tr>
+        <td>{{ a.id }}</td>
+        <td>{{ a.rule_id }}</td>
+
+        <td>
+            {{ a.proposed_name }}
+            {% if a.name_changed %}
+                ⭐
+            {% endif %}
+        </td>
+
+        <td>
+            {{ a.proposed_ingredients }}
+            {% if a.ingredients_changed %}
+                ⭐
+            {% endif %}
+        </td>
+
+        <td>
+            {{ a.proposed_risk }}
+            {% if a.risk_changed %}
+                ⭐
+            {% endif %}
+        </td>
+
+        <td>
+            <a class="btn" href="/admin/approve/{{ a.id }}">Approve</a>
+            <a class="btn btn-danger" href="/admin/reject/{{ a.id }}">Disapprove</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>

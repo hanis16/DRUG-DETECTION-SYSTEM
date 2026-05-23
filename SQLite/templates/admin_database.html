@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            background:#f4f6f8;
+            padding:20px;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-logout {
+            padding: 8px 14px;
+            background: #dc2626;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .btn-logout:hover {
+            background: #b91c1c;
+        }
+
+        /* Navigation */
+        .nav {
+            margin-bottom:20px;
+        }
+
+        .nav a {
+            margin-right:15px;
+            text-decoration:none;
+            font-weight:bold;
+            color:#2563eb;
+        }
+
+        .nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Table */
+        table {
+            border-collapse: collapse;
+            width:100%;
+            background:white;
+            margin-bottom:30px;
+        }
+
+        th, td {
+            padding:10px;
+            border:1px solid #ddd;
+            text-align:left;
+        }
+
+        th {
+            background:#1f2937;
+            color:white;
+        }
+
+        /* Buttons */
+        a.btn {
+            padding:6px 10px;
+            background:#2563eb;
+            color:white;
+            text-decoration:none;
+            border-radius:4px;
+        }
+
+        a.btn-danger {
+            background:#dc2626;
+        }
+
+        a.btn-secondary {
+            background:#6b7280;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div>
+        <h2 style="margin:0;">Admin Dashboard</h2>
+        <p style="margin:5px 0;">Role: <strong>{{ role }}</strong></p>
+    </div>
+
+    <a href="{{ url_for('admin_logout') }}" class="btn-logout">Logout</a>
+</div>
+
+<div class="nav">
+    <a href="/admin/database">Database</a>
+    {% if role|lower == "superadmin" %}
+        <a href="/admin/approvals">Approvals</a>
+    {% endif %}
+</div>
+
+<h3>All Regulatory Rules</h3>
+
+<table>
+    <tr>
+        <th>Rule ID</th>
+        <th>Name</th>
+        <th>Ingredients</th>
+        <th>Risk Level</th>
+        <th>Action</th>
+    </tr>
+
+    {% for r in rules %}
+    <tr>
+        <td>{{ r[0] }}</td>
+        <td>{{ r[1] }}</td>
+        <td>{{ r[2] }}</td>
+        <td>{{ r[3] }}</td>
+        <td>
+            <a class="btn" href="{{ url_for('edit_rule', rule_id=r[0]) }}">Edit</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>
